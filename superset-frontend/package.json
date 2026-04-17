@@ -303,7 +303,7 @@
     "imports-loader": "^5.0.0",
     "jest": "^30.0.2",
     "jest-environment-jsdom": "^29.7.0",
-    "jest-html-reporter": "^4.3.0",
+    "jest-html-reporter": "^4.4.0",
     "jest-websocket-mock": "^2.5.0",
     "jsdom": "^26.0.0",
     "lerna": "^8.2.1",
