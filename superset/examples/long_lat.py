@@ -110,7 +110,14 @@ def load_long_lat_data(only_metadata: bool = False, force: bool = False) -> None
         "viz_type": "mapbox",
         "all_columns_x": "LON",
         "all_columns_y": "LAT",
-        "mapbox_style": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "mapbox_style": "mapbox://styles/mapbox/light-v9",
+        "mapbox_color": "rgb(0, 139, 139)",
+        "clustering_radius": "60",
+        "global_opacity": 1,
+        "pandas_aggfunc": "sum",
+        "point_radius": "Auto",
+        "point_radius_unit": "Pixels",
+        "render_while_dragging": True,
         "all_columns": ["occupancy"],
         "row_limit": 500000,
     }
@@ -118,7 +125,7 @@ def load_long_lat_data(only_metadata: bool = False, force: bool = False) -> None
     logger.debug("Creating a slice")
     slc = Slice(
         slice_name="OSM Long/Lat",
-        viz_type="osm",
+        viz_type="mapbox",
         datasource_type=DatasourceType.TABLE,
         datasource_id=tbl.id,
         params=get_slice_json(slice_data),

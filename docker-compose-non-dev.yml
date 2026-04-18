@@ -24,24 +24,29 @@
 # For verbose logging during development:
 # - Set SUPERSET_LOG_LEVEL=debug in docker/.env-local for detailed Superset logs
 # -----------------------------------------------------------------------
+name: superset_6
+
 x-superset-volumes:
   &superset-volumes # /app/pythonpath_docker will be appended to the PYTHONPATH in the final container
   - ./docker:/app/docker
-  - superset_home:/app/superset_home
+  - ./docker/pythonpath_dev:/app/pythonpath
+  - superset_home_6:/app/superset_home
 
 x-common-build: &common-build
   context: .
   target: dev
-  cache_from:
-    - apache/superset-cache:3.10-slim-bookworm
+  args:
+    INCLUDE_CHROMIUM: "true"
 
 services:
   redis:
     image: redis:7
-    container_name: superset_cache
+    container_name: superset_cache_6
     restart: unless-stopped
+    ports:
+      - "${REDIS_HOST_PORT:-6381}:6379"
     volumes:
-      - redis:/data
+      - redis_6:/data
 
   db:
     env_file:
@@ -50,13 +55,16 @@ services:
       - path: docker/.env-local # optional override
         required: false
     image: postgres:16
-    container_name: superset_db
+    container_name: superset_db_6
     restart: unless-stopped
+    ports:
+      - "${DB_HOST_PORT:-5437}:5432"
     volumes:
-      - db_home:/var/lib/postgresql/data
+      - db_home_6:/var/lib/postgresql/data
       - ./docker/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
 
   superset:
+    image: superset-local:6.0-non-dev
     env_file:
       - path: docker/.env # default
         required: true
@@ -64,19 +72,20 @@ services:
         required: false
     build:
       <<: *common-build
-    container_name: superset_app
+    container_name: superset_app_6
     command: ["/app/docker/docker-bootstrap.sh", "app-gunicorn"]
     user: "root"
     restart: unless-stopped
     ports:
-      - 8088:8088
+      - "${SUPERSET_HOST_PORT:-8090}:8088"
     depends_on:
       superset-init:
         condition: service_completed_successfully
     volumes: *superset-volumes
 
   superset-init:
-    container_name: superset_init
+    container_name: superset_init_6
+    image: superset-local:6.0-non-dev
     build:
       <<: *common-build
     command: ["/app/docker/docker-init.sh"]
@@ -96,9 +105,10 @@ services:
       disable: true
 
   superset-worker:
+    image: superset-local:6.0-non-dev
     build:
       <<: *common-build
-    container_name: superset_worker
+    container_name: superset_worker_6
     command: ["/app/docker/docker-bootstrap.sh", "worker"]
     env_file:
       - path: docker/.env # default
@@ -119,9 +129,10 @@ services:
         ]
 
   superset-worker-beat:
+    image: superset-local:6.0-non-dev
     build:
       <<: *common-build
-    container_name: superset_worker_beat
+    container_name: superset_worker_beat_6
     command: ["/app/docker/docker-bootstrap.sh", "beat"]
     env_file:
       - path: docker/.env # default
@@ -138,9 +149,9 @@ services:
       disable: true
 
 volumes:
-  superset_home:
+  superset_home_6:
     external: false
-  db_home:
+  db_home_6:
     external: false
-  redis:
+  redis_6:
     external: false

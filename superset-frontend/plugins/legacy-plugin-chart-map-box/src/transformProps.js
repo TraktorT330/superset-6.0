@@ -24,7 +24,13 @@ const NOOP = () => {};
 export default function transformProps(chartProps) {
   const { width, height, formData, hooks, queriesData } = chartProps;
   const { onError = NOOP, setControlValue = NOOP } = hooks;
-  const { bounds, geoJSON, hasCustomMetric, mapboxApiKey } =
+  const {
+    bounds,
+    geoJSON,
+    hasCustomMetric,
+    mapStyle: queryMapStyle,
+    mapboxApiKey,
+  } =
     queriesData[0].data;
   const {
     clusteringRadius,
@@ -36,18 +42,34 @@ export default function transformProps(chartProps) {
     pointRadiusUnit,
     renderWhileDragging,
   } = formData;
+  const defaultMapboxColor = 'rgb(0, 139, 139)';
+  const defaultMapboxStyle = 'mapbox://styles/mapbox/light-v9';
+  const resolvedColor = mapboxColor || defaultMapboxColor;
+  const resolvedMapStyle = mapboxStyle || queryMapStyle || defaultMapboxStyle;
+  const resolvedClusteringRadius = Number(clusteringRadius ?? 60);
+  const resolvedGlobalOpacity = globalOpacity ?? 1;
+  const resolvedPointRadiusUnit = pointRadiusUnit || 'Pixels';
+  const resolvedRenderWhileDragging = renderWhileDragging ?? true;
+  const resolvedAggregator = pandasAggfunc || 'sum';
+  const resolvedPointRadius =
+    pointRadius == null || pointRadius === 'Auto'
+      ? DEFAULT_POINT_RADIUS
+      : pointRadius;
 
   // Validate mapbox color
-  const rgb = /^rgb\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3})\)$/.exec(mapboxColor);
+  let rgb = /^rgb\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3})\)$/.exec(
+    resolvedColor,
+  );
   if (rgb === null) {
     onError("Color field must be of form 'rgb(%d, %d, %d)'");
-
-    return {};
+    rgb = /^rgb\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3})\)$/.exec(
+      defaultMapboxColor,
+    );
   }
 
   const opts = {
     maxZoom: DEFAULT_MAX_ZOOM,
-    radius: clusteringRadius,
+    radius: resolvedClusteringRadius,
   };
   if (hasCustomMetric) {
     opts.initial = () => ({
@@ -78,21 +100,21 @@ export default function transformProps(chartProps) {
   return {
     width,
     height,
-    aggregatorName: pandasAggfunc,
+    aggregatorName: resolvedAggregator,
     bounds,
     clusterer,
-    globalOpacity,
+    globalOpacity: resolvedGlobalOpacity,
     hasCustomMetric,
     mapboxApiKey,
-    mapStyle: mapboxStyle,
+    mapStyle: resolvedMapStyle,
     onViewportChange({ latitude, longitude, zoom }) {
       setControlValue('viewport_longitude', longitude);
       setControlValue('viewport_latitude', latitude);
       setControlValue('viewport_zoom', zoom);
     },
-    pointRadius: pointRadius === 'Auto' ? DEFAULT_POINT_RADIUS : pointRadius,
-    pointRadiusUnit,
-    renderWhileDragging,
+    pointRadius: resolvedPointRadius,
+    pointRadiusUnit: resolvedPointRadiusUnit,
+    renderWhileDragging: resolvedRenderWhileDragging,
     rgb,
   };
 }

@@ -198,7 +198,10 @@ class Datasource(BaseSupersetView):
     def samples(self) -> FlaskResponse:
         try:
             params = SamplesRequestSchema().load(request.args)
-            payload = SamplesPayloadSchema().load(request.json)
+            # `request.json` may raise when the client sends an empty body or
+            # omits the JSON content type. `silent=True` keeps the samples
+            # endpoint compatible with callers that don't need a payload.
+            payload = SamplesPayloadSchema().load(request.get_json(silent=True))
         except ValidationError as err:
             return json_error_response(err.messages, status=400)
 
