@@ -17,7 +17,8 @@
 from typing import Any, Optional, TypedDict
 
 from flask import current_app as app
-from marshmallow import fields, post_load, pre_load, Schema, validate
+from marshmallow import fields, post_load, pre_load, Schema, validate, validates
+from marshmallow.exceptions import ValidationError
 
 from superset.charts.schemas import ChartDataExtrasSchema, ChartDataFilterSchema
 from superset.utils.core import DatasourceType
@@ -99,10 +100,7 @@ class SamplesRequestSchema(Schema):
     datasource_id = fields.Integer(required=True)
     force = fields.Boolean(load_default=False)
     page = fields.Integer(load_default=1)
-    per_page = fields.Integer(
-        validate=validate.Range(min=1, max=1000),
-        load_default=None,
-    )
+    per_page = fields.Integer(load_default=None)
     dashboard_id = fields.Integer(required=False, allow_none=True, load_default=None)
 
     @pre_load
@@ -118,3 +116,14 @@ class SamplesRequestSchema(Schema):
         if "per_page" not in data:
             data["per_page"] = app.config.get("SAMPLES_ROW_LIMIT", 1000)
         return data
+
+    # The upper bound must be the configured SAMPLES_ROW_LIMIT, not a hardcoded
+    # 1000, because set_default_per_page injects SAMPLES_ROW_LIMIT as the default
+    # when the client omits per_page (the Samples pane does this).
+    @validates("per_page")
+    def validate_per_page(self, value: Optional[int], **_: Any) -> None:
+        if value is None:
+            return
+        max_per_page = app.config.get("SAMPLES_ROW_LIMIT", 1000)
+        if value < 1 or value > max_per_page:
+            raise ValidationError(f"Must be between 1 and {max_per_page}.")
